@@ -54,10 +54,10 @@ export default function DashboardPage() {
             <p className="text-zinc-400">Crear, editar precios y disponibilidad.</p>
           </a>
 
-          <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6">
+          <a href="/categorias" className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 hover:border-orange-500">
             <h2 className="text-xl font-bold mb-2">Categorías</h2>
             <p className="text-zinc-400">Ordenar productos por tipo.</p>
-          </div>
+          </a>
 
           <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6">
             <h2 className="text-xl font-bold mb-2">Mesas</h2>
