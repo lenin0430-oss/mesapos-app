@@ -59,10 +59,10 @@ export default function DashboardPage() {
             <p className="text-zinc-400">Ordenar productos por tipo.</p>
           </a>
 
-          <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6">
+          <a href="/mesas" className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 hover:border-orange-500">
             <h2 className="text-xl font-bold mb-2">Mesas</h2>
             <p className="text-zinc-400">Configurar mesas del local.</p>
-          </div>
+          </a>
         </div>
       </div>
     </main>
