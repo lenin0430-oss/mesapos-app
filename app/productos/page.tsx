@@ -1,180 +1,311 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
 
 type Producto = {
-  id: string;
+  id: number;
   nombre: string;
-  descripcion: string | null;
   precio: number;
-  disponible: boolean;
+  categoria: string;
+  activo: boolean;
 };
 
+const categoriasBase = [
+  "Comida rápida",
+  "Platos",
+  "Arepas",
+  "Pepitos",
+  "Pasapalos",
+  "Acompañamientos",
+  "Bebidas",
+];
+
+const productosBase: Producto[] = [
+  { id: 1, nombre: "Hamburguesa", precio: 3000, categoria: "Comida rápida", activo: true },
+  { id: 2, nombre: "Perro caliente", precio: 1000, categoria: "Comida rápida", activo: true },
+  { id: 3, nombre: "Arroz chino", precio: 7500, categoria: "Platos", activo: true },
+  { id: 4, nombre: "Cachapa", precio: 6000, categoria: "Platos", activo: true },
+  { id: 5, nombre: "Arepa carne mechada", precio: 5500, categoria: "Arepas", activo: true },
+  { id: 6, nombre: "Arepa reina pepiada", precio: 5500, categoria: "Arepas", activo: true },
+  { id: 7, nombre: "Pepito mixto", precio: 8500, categoria: "Pepitos", activo: true },
+  { id: 8, nombre: "Pepito de pollo", precio: 7500, categoria: "Pepitos", activo: true },
+  { id: 9, nombre: "Tequeños 6 unidades", precio: 4500, categoria: "Pasapalos", activo: true },
+  { id: 10, nombre: "Papas fritas", precio: 3500, categoria: "Acompañamientos", activo: true },
+];
+
 export default function ProductosPage() {
-  const router = useRouter();
-
-  const [empresaId, setEmpresaId] = useState("");
   const [productos, setProductos] = useState<Producto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [categorias, setCategorias] = useState<string[]>(categoriasBase);
+  const [busqueda, setBusqueda] = useState("");
+  const [categoriaFiltro, setCategoriaFiltro] = useState("Todas");
 
-  const [nuevoNombre, setNuevoNombre] = useState("");
-  const [nuevoPrecio, setNuevoPrecio] = useState("");
-  const [nuevaDescripcion, setNuevaDescripcion] = useState("");
+  const [editandoId, setEditandoId] = useState<number | null>(null);
+  const [nombre, setNombre] = useState("");
+  const [precio, setPrecio] = useState("");
+  const [categoria, setCategoria] = useState(categoriasBase[0]);
 
   useEffect(() => {
-    cargarProductos();
+    const guardados = localStorage.getItem("productos_pos");
+
+    if (guardados) {
+      setProductos(JSON.parse(guardados));
+    } else {
+      localStorage.setItem("productos_pos", JSON.stringify(productosBase));
+      setProductos(productosBase);
+    }
+
+    const categoriasGuardadas = localStorage.getItem("categorias_pos");
+
+    if (categoriasGuardadas) {
+      const categoriasActivas = JSON.parse(categoriasGuardadas)
+        .filter((cat: any) => cat.activa)
+        .map((cat: any) => cat.nombre);
+
+      setCategorias(categoriasActivas);
+      setCategoria(categoriasActivas[0] || categoriasBase[0]);
+    }
   }, []);
 
-  const cargarProductos = async () => {
-    const { data: userData } = await supabase.auth.getUser();
+  const guardarProductos = (data: Producto[]) => {
+    localStorage.setItem("productos_pos", JSON.stringify(data));
+    setProductos(data);
+  };
 
-    if (!userData.user) {
-      router.push("/login");
+  const formatoPrecio = (valor: number) => {
+    return new Intl.NumberFormat("es-CL").format(valor);
+  };
+
+  const limpiarFormulario = () => {
+    setEditandoId(null);
+    setNombre("");
+    setPrecio("");
+    setCategoria(categoriasBase[0]);
+  };
+
+  const guardarProducto = () => {
+    if (!nombre.trim()) {
+      alert("Ingresa el nombre del producto.");
       return;
     }
 
-    const { data: perfil } = await supabase
-      .from("usuarios")
-      .select("empresa_id")
-      .eq("id", userData.user.id)
-      .single();
+    const precioNumero = Number(precio);
 
-    if (!perfil) {
-      setLoading(false);
+    if (!precioNumero || precioNumero <= 0) {
+      alert("Ingresa un precio válido.");
       return;
     }
 
-    setEmpresaId(perfil.empresa_id);
+    if (editandoId) {
+      const actualizados = productos.map((producto) =>
+        producto.id === editandoId
+          ? {
+              ...producto,
+              nombre: nombre.trim(),
+              precio: precioNumero,
+              categoria,
+            }
+          : producto
+      );
 
-    const { data } = await supabase
-      .from("productos")
-      .select("id, nombre, descripcion, precio, disponible")
-      .eq("empresa_id", perfil.empresa_id)
-      .order("nombre", { ascending: true });
+      guardarProductos(actualizados);
+      limpiarFormulario();
+      return;
+    }
 
-    setProductos(data || []);
-    setLoading(false);
+    const nuevoProducto: Producto = {
+      id: Date.now(),
+      nombre: nombre.trim(),
+      precio: precioNumero,
+      categoria,
+      activo: true,
+    };
+
+    guardarProductos([nuevoProducto, ...productos]);
+    limpiarFormulario();
   };
 
-  const crearProducto = async () => {
-    if (!nuevoNombre || !nuevoPrecio || !empresaId) return;
-
-    await supabase.from("productos").insert({
-      empresa_id: empresaId,
-      nombre: nuevoNombre,
-      descripcion: nuevaDescripcion,
-      precio: Number(nuevoPrecio),
-      disponible: true,
-    });
-
-    setNuevoNombre("");
-    setNuevoPrecio("");
-    setNuevaDescripcion("");
-
-    cargarProductos();
+  const editarProducto = (producto: Producto) => {
+    setEditandoId(producto.id);
+    setNombre(producto.nombre);
+    setPrecio(String(producto.precio));
+    setCategoria(producto.categoria);
   };
 
-  const cambiarPrecio = async (id: string, precio: number) => {
-    await supabase.from("productos").update({ precio }).eq("id", id);
-    cargarProductos();
+  const eliminarProducto = (id: number) => {
+    if (!confirm("¿Eliminar este producto?")) return;
+
+    const actualizados = productos.filter((producto) => producto.id !== id);
+    guardarProductos(actualizados);
   };
 
-  const cambiarDisponibilidad = async (id: string, disponible: boolean) => {
-    await supabase.from("productos").update({ disponible }).eq("id", id);
-    cargarProductos();
+  const cambiarEstado = (id: number) => {
+    const actualizados = productos.map((producto) =>
+      producto.id === id ? { ...producto, activo: !producto.activo } : producto
+    );
+
+    guardarProductos(actualizados);
   };
+
+  const productosFiltrados = productos.filter((producto) => {
+    const coincideBusqueda = producto.nombre
+      .toLowerCase()
+      .includes(busqueda.toLowerCase());
+
+    const coincideCategoria =
+      categoriaFiltro === "Todas" || producto.categoria === categoriaFiltro;
+
+    return coincideBusqueda && coincideCategoria;
+  });
 
   return (
-    <main className="min-h-screen bg-black text-white p-8">
-      <div className="max-w-5xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+    <main className="min-h-screen bg-zinc-950 text-white p-6">
+      <div className="mb-8">
+        <a href="/dashboard" className="text-orange-400 hover:underline">
+          ← Volver al dashboard
+        </a>
+
+        <div className="flex items-center justify-between gap-4 mt-6">
           <div>
-            <h1 className="text-4xl font-bold">Productos</h1>
-            <p className="text-zinc-400 mt-2">Edita precios, disponibilidad y crea productos.</p>
+            <h1 className="text-3xl font-bold">Productos</h1>
+            <p className="text-zinc-400 mt-2">
+              Administra productos, precios, categorías y estado.
+            </p>
           </div>
 
-          <a href="/dashboard" className="bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded-lg">
-            Volver
+          <a
+            href="/pedidos"
+            className="rounded-xl bg-orange-500 px-4 py-3 font-bold text-black hover:bg-orange-400"
+          >
+            Ir a mesas
           </a>
         </div>
+      </div>
 
-        <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5 mb-8">
-          <h2 className="text-2xl font-bold mb-4">Agregar producto</h2>
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+          <h2 className="text-xl font-bold mb-4">
+            {editandoId ? "Editar producto" : "Crear producto"}
+          </h2>
 
-          <div className="grid md:grid-cols-4 gap-3">
+          <div className="space-y-4">
             <input
-              placeholder="Nombre"
-              value={nuevoNombre}
-              onChange={(e) => setNuevoNombre(e.target.value)}
-              className="bg-zinc-900 border border-zinc-700 rounded-lg p-3"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              placeholder="Nombre del producto"
+              className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white"
             />
 
             <input
-              placeholder="Descripción"
-              value={nuevaDescripcion}
-              onChange={(e) => setNuevaDescripcion(e.target.value)}
-              className="bg-zinc-900 border border-zinc-700 rounded-lg p-3"
-            />
-
-            <input
+              value={precio}
+              onChange={(e) => setPrecio(e.target.value)}
               placeholder="Precio"
               type="number"
-              value={nuevoPrecio}
-              onChange={(e) => setNuevoPrecio(e.target.value)}
-              className="bg-zinc-900 border border-zinc-700 rounded-lg p-3"
+              className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white"
             />
 
-            <button
-              onClick={crearProducto}
-              className="bg-orange-600 hover:bg-orange-500 rounded-lg p-3 font-semibold"
+            <select
+              value={categoria}
+              onChange={(e) => setCategoria(e.target.value)}
+              className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white"
             >
-              Agregar
+              {categorias.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+
+            <button
+              onClick={guardarProducto}
+              className="w-full rounded-xl bg-orange-500 py-3 font-bold text-black hover:bg-orange-400"
+            >
+              {editandoId ? "Guardar cambios" : "Crear producto"}
             </button>
+
+            {editandoId && (
+              <button
+                onClick={limpiarFormulario}
+                className="w-full rounded-xl border border-zinc-700 py-3 font-bold hover:bg-zinc-800"
+              >
+                Cancelar edición
+              </button>
+            )}
           </div>
         </div>
 
-        {loading ? (
-          <p>Cargando productos...</p>
-        ) : (
-          <div className="space-y-4">
-            {productos.map((producto) => (
-              <div
-                key={producto.id}
-                className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
-              >
-                <div>
-                  <h2 className="text-xl font-bold">{producto.nombre}</h2>
-                  <p className="text-zinc-400">{producto.descripcion}</p>
-                  <p className="mt-2 text-sm">
-                    Estado:{" "}
-                    <span className={producto.disponible ? "text-green-400" : "text-red-400"}>
-                      {producto.disponible ? "Disponible" : "No disponible"}
-                    </span>
-                  </p>
-                </div>
+        <div className="lg:col-span-2 rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+          <div className="flex flex-col md:flex-row gap-3 mb-5">
+            <input
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar producto..."
+              className="flex-1 rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white"
+            />
 
-                <div className="flex gap-3 items-center">
-                  <input
-                    type="number"
-                    defaultValue={producto.precio}
-                    className="w-32 bg-zinc-900 border border-zinc-700 rounded-lg p-3"
-                    onBlur={(e) => cambiarPrecio(producto.id, Number(e.target.value))}
-                  />
-
-                  <button
-                    onClick={() => cambiarDisponibilidad(producto.id, !producto.disponible)}
-                    className="bg-orange-600 hover:bg-orange-500 rounded-lg px-4 py-3 font-semibold"
-                  >
-                    {producto.disponible ? "Desactivar" : "Activar"}
-                  </button>
-                </div>
-              </div>
-            ))}
+            <select
+              value={categoriaFiltro}
+              onChange={(e) => setCategoriaFiltro(e.target.value)}
+              className="rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white"
+            >
+              <option value="Todas">Todas</option>
+              {categorias.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
           </div>
-        )}
-      </div>
+
+          <div className="space-y-3">
+            {productosFiltrados.length === 0 ? (
+              <p className="text-zinc-400">No hay productos para mostrar.</p>
+            ) : (
+              productosFiltrados.map((producto) => (
+                <div
+                  key={producto.id}
+                  className="rounded-xl bg-zinc-800 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+                >
+                  <div>
+                    <h3 className="text-lg font-bold">{producto.nombre}</h3>
+                    <p className="text-zinc-400">{producto.categoria}</p>
+                    <p className="font-bold">$ {formatoPrecio(producto.precio)}</p>
+                    <p
+                      className={
+                        producto.activo ? "text-green-400" : "text-red-400"
+                      }
+                    >
+                      {producto.activo ? "Activo" : "Inactivo"}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => editarProducto(producto)}
+                      className="rounded-xl bg-blue-600 px-4 py-2 font-bold hover:bg-blue-500"
+                    >
+                      Editar
+                    </button>
+
+                    <button
+                      onClick={() => cambiarEstado(producto.id)}
+                      className="rounded-xl bg-yellow-500 px-4 py-2 font-bold text-black hover:bg-yellow-400"
+                    >
+                      {producto.activo ? "Desactivar" : "Activar"}
+                    </button>
+
+                    <button
+                      onClick={() => eliminarProducto(producto.id)}
+                      className="rounded-xl bg-red-600 px-4 py-2 font-bold hover:bg-red-500"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </section>
     </main>
   );
 }
