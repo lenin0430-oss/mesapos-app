@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 
 type EstadoMesa = "Libre" | "Ocupada" | "Por cobrar";
@@ -48,11 +47,8 @@ export default function PedidosPage() {
           <h1 className="text-3xl font-bold mt-2">Mesas</h1>
           <p className="text-zinc-400 mt-1">Selecciona una mesa para tomar el pedido.</p>
         </div>
-        <a href="/pedidos/enviados" className="rounded-xl bg-orange-500 px-5 py-3 font-bold text-black hover:bg-orange-400 transition">
-          Ver pedidos activos
-        </a>
+        <a href="/pedidos/enviados" className="rounded-xl bg-orange-500 px-5 py-3 font-bold text-black hover:bg-orange-400 transition">Ver pedidos activos</a>
       </div>
-
       <div className="grid grid-cols-3 gap-4 mb-8">
         <div className="rounded-2xl border border-green-500/30 bg-green-500/10 p-4 text-center">
           <p className="text-green-400 text-sm font-bold">Libres</p>
@@ -67,30 +63,25 @@ export default function PedidosPage() {
           <p className="text-3xl font-bold text-red-400">{porCobrar}</p>
         </div>
       </div>
-
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {mesas.map((mesa) => (
-          
-            key={mesa.id}
-            href={"/pedidos/" + mesa.nombre.toLowerCase().replace(" ", "-")}
-            className={"rounded-2xl border bg-zinc-900 p-6 transition " + border(mesa.estado)}
-          >
-            <div className="flex items-start justify-between mb-4">
-              <h2 className="text-2xl font-bold">{mesa.nombre}</h2>
-              <span className={"rounded-full px-3 py-1 text-xs font-bold " + badge(mesa.estado)}>
-                {mesa.estado}
-              </span>
-            </div>
-            {mesa.total && mesa.estado !== "Libre" ? (
-              <p className="text-zinc-300 font-bold text-lg mb-4">$ {fmt(mesa.total)}</p>
-            ) : (
-              <p className="text-zinc-600 mb-4">Sin pedido activo</p>
-            )}
-            <div className={"rounded-xl py-3 text-center font-bold text-sm " + btnColor(mesa.estado)}>
-              {btnTexto(mesa.estado)}
-            </div>
-          </a>
-        ))}
+        {mesas.map((mesa) => {
+          const href = "/pedidos/" + mesa.nombre.toLowerCase().replace(" ", "-");
+          const cls = "rounded-2xl border bg-zinc-900 p-6 transition " + border(mesa.estado);
+          return (
+            <a key={mesa.id} href={href} className={cls}>
+              <div className="flex items-start justify-between mb-4">
+                <h2 className="text-2xl font-bold">{mesa.nombre}</h2>
+                <span className={"rounded-full px-3 py-1 text-xs font-bold " + badge(mesa.estado)}>{mesa.estado}</span>
+              </div>
+              {mesa.total && mesa.estado !== "Libre" ? (
+                <p className="text-zinc-300 font-bold text-lg mb-4">$ {fmt(mesa.total)}</p>
+              ) : (
+                <p className="text-zinc-600 mb-4">Sin pedido activo</p>
+              )}
+              <div className={"rounded-xl py-3 text-center font-bold text-sm " + btnColor(mesa.estado)}>{btnTexto(mesa.estado)}</div>
+            </a>
+          );
+        })}
       </section>
     </main>
   );
