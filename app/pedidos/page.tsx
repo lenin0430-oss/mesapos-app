@@ -14,15 +14,15 @@ const mesasBase: Mesa[] = [
 ];
 
 export default function PedidosPage() {
-  const [mesas, setMesas] = useState<Mesa[]>(mesasBase);
+  const [mesas, setMesas] = useState(mesasBase);
 
   useEffect(() => {
     const enviados = JSON.parse(localStorage.getItem("pedidos_enviados") || "[]");
     const config = JSON.parse(localStorage.getItem("mesas_pos") || JSON.stringify(mesasBase));
-    const actualizadas: Mesa[] = config.map((mesa: any) => {
+    const actualizadas = config.map((mesa) => {
       const n = mesa.nombre;
-      const activo = enviados.find((p: any) => p.mesa === n && (p.estado === "Enviado" || p.estado === "En preparacion"));
-      const cobrar = enviados.find((p: any) => p.mesa === n && p.estado === "Por cobrar");
+      const activo = enviados.find((p) => p.mesa === n && (p.estado === "Enviado" || p.estado === "En preparacion"));
+      const cobrar = enviados.find((p) => p.mesa === n && p.estado === "Por cobrar");
       if (cobrar) return { ...mesa, estado: "Por cobrar", total: cobrar.total };
       if (activo) return { ...mesa, estado: "Ocupada", total: activo.total };
       return { ...mesa, estado: "Libre", total: undefined };
@@ -30,11 +30,11 @@ export default function PedidosPage() {
     setMesas(actualizadas);
   }, []);
 
-  const fmt = (v: number) => new Intl.NumberFormat("es-CL").format(v);
-  const border = (e: EstadoMesa) => e === "Libre" ? "border-zinc-800 hover:border-green-500" : e === "Ocupada" ? "border-yellow-500" : "border-red-500";
-  const badge = (e: EstadoMesa) => e === "Libre" ? "bg-green-500/20 text-green-400 border border-green-500/40" : e === "Ocupada" ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40" : "bg-red-500/20 text-red-400 border border-red-500/40";
-  const btnColor = (e: EstadoMesa) => e === "Libre" ? "bg-orange-500 text-black" : e === "Ocupada" ? "bg-yellow-500 text-black" : "bg-red-500 text-white";
-  const btnTexto = (e: EstadoMesa) => e === "Libre" ? "Tomar pedido" : e === "Ocupada" ? "Ver pedido" : "Cobrar mesa";
+  const fmt = (v) => new Intl.NumberFormat("es-CL").format(v);
+  const border = (e) => e === "Libre" ? "border-zinc-800 hover:border-green-500" : e === "Ocupada" ? "border-yellow-500" : "border-red-500";
+  const badge = (e) => e === "Libre" ? "bg-green-500/20 text-green-400 border border-green-500/40" : e === "Ocupada" ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40" : "bg-red-500/20 text-red-400 border border-red-500/40";
+  const btnColor = (e) => e === "Libre" ? "bg-orange-500 text-black" : e === "Ocupada" ? "bg-yellow-500 text-black" : "bg-red-500 text-white";
+  const btnTexto = (e) => e === "Libre" ? "Tomar pedido" : e === "Ocupada" ? "Ver pedido" : "Cobrar mesa";
   const libres = mesas.filter((m) => m.estado === "Libre").length;
   const ocupadas = mesas.filter((m) => m.estado === "Ocupada").length;
   const porCobrar = mesas.filter((m) => m.estado === "Por cobrar").length;
