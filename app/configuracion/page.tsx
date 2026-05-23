@@ -6,20 +6,21 @@ export default function ConfiguracionPage() {
   const [moneda, setMoneda] = useState("$");
   const [mesas, setMesas] = useState("6");
   const [guardado, setGuardado] = useState(false);
+  const [urlCarta, setUrlCarta] = useState("/carta");
 
   useEffect(() => {
+    setUrlCarta(window.location.origin + "/carta");
     const config = localStorage.getItem("config_negocio");
     if (config) {
       const datos = JSON.parse(config);
-      setNombre(datos.nombre || "");
-      setMoneda(datos.moneda || "$");
-      setMesas(datos.mesas || "6");
+      if (datos.nombre) setNombre(datos.nombre);
+      if (datos.moneda) setMoneda(datos.moneda);
+      if (datos.mesas) setMesas(datos.mesas);
     }
   }, []);
 
   const guardar = () => {
-    const config = { nombre, moneda, mesas };
-    localStorage.setItem("config_negocio", JSON.stringify(config));
+    localStorage.setItem("config_negocio", JSON.stringify({ nombre, moneda, mesas }));
     setGuardado(true);
     setTimeout(() => setGuardado(false), 2000);
   };
@@ -36,50 +37,24 @@ export default function ConfiguracionPage() {
         <div className="space-y-6">
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
             <h2 className="text-xl font-bold mb-5">Datos del negocio</h2>
-
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-bold text-zinc-400 mb-2 block">
-                  Nombre del negocio
-                </label>
-                <input
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
-                  placeholder="Ej: La Felicitta, Burger House..."
-                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white"
-                />
+                <label className="text-sm font-bold text-zinc-400 mb-2 block">Nombre del negocio</label>
+                <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: La Felicitta, Burger House..." className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white" />
               </div>
-
               <div>
-                <label className="text-sm font-bold text-zinc-400 mb-2 block">
-                  Simbolo de moneda
-                </label>
+                <label className="text-sm font-bold text-zinc-400 mb-2 block">Simbolo de moneda</label>
                 <div className="flex gap-2">
                   {["$", "USD", "EUR", "S/", "Bs"].map((m) => (
-                    <button
-                      key={m}
-                      onClick={() => setMoneda(m)}
-                      className={moneda === m ? "flex-1 rounded-xl bg-orange-500 text-black font-bold py-3" : "flex-1 rounded-xl bg-zinc-800 font-bold py-3 hover:bg-zinc-700"}
-                    >
-                      {m}
-                    </button>
+                    <button key={m} onClick={() => setMoneda(m)} className={moneda === m ? "flex-1 rounded-xl bg-orange-500 text-black font-bold py-3" : "flex-1 rounded-xl bg-zinc-800 font-bold py-3 hover:bg-zinc-700"}>{m}</button>
                   ))}
                 </div>
               </div>
-
               <div>
-                <label className="text-sm font-bold text-zinc-400 mb-2 block">
-                  Numero de mesas
-                </label>
+                <label className="text-sm font-bold text-zinc-400 mb-2 block">Numero de mesas</label>
                 <div className="flex gap-2">
                   {["4", "6", "8", "10", "12"].map((n) => (
-                    <button
-                      key={n}
-                      onClick={() => setMesas(n)}
-                      className={mesas === n ? "flex-1 rounded-xl bg-orange-500 text-black font-bold py-3" : "flex-1 rounded-xl bg-zinc-800 font-bold py-3 hover:bg-zinc-700"}
-                    >
-                      {n}
-                    </button>
+                    <button key={n} onClick={() => setMesas(n)} className={mesas === n ? "flex-1 rounded-xl bg-orange-500 text-black font-bold py-3" : "flex-1 rounded-xl bg-zinc-800 font-bold py-3 hover:bg-zinc-700"}>{n}</button>
                   ))}
                 </div>
               </div>
@@ -88,23 +63,10 @@ export default function ConfiguracionPage() {
 
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
             <h2 className="text-xl font-bold mb-4">Carta QR</h2>
-            <p className="text-zinc-400 text-sm mb-4">
-              Comparte este enlace para que tus clientes vean el menu digital.
-            </p>
+            <p className="text-zinc-400 text-sm mb-4">Comparte este enlace para que tus clientes vean el menu digital.</p>
             <div className="rounded-xl bg-zinc-950 border border-zinc-700 p-3 flex items-center justify-between gap-3">
-              <span className="text-orange-400 text-sm font-bold truncate">
-                {typeof window !== "undefined" ? window.location.origin + "/carta" : "/carta"}
-              </span>
-              <button
-                onClick={() => {
-                  const url = window.location.origin + "/carta";
-                  navigator.clipboard.writeText(url);
-                  alert("URL copiada");
-                }}
-                className="rounded-lg bg-zinc-700 px-3 py-2 text-sm font-bold hover:bg-zinc-600 whitespace-nowrap"
-              >
-                Copiar
-              </button>
+              <span className="text-orange-400 text-sm font-bold truncate">{urlCarta}</span>
+              <button onClick={() => { navigator.clipboard.writeText(urlCarta); alert("URL copiada"); }} className="rounded-lg bg-zinc-700 px-3 py-2 text-sm font-bold hover:bg-zinc-600 whitespace-nowrap">Copiar</button>
             </div>
           </div>
 
@@ -130,10 +92,7 @@ export default function ConfiguracionPage() {
             </div>
           </div>
 
-          <button
-            onClick={guardar}
-            className={`w-full rounded-xl py-4 font-bold text-lg transition ${guardado ? "bg-green-600 text-white" : "bg-orange-500 text-black hover:bg-orange-400"}`}
-          >
+          <button onClick={guardar} className={`w-full rounded-xl py-4 font-bold text-lg transition ${guardado ? "bg-green-600 text-white" : "bg-orange-500 text-black hover:bg-orange-400"}`}>
             {guardado ? "Guardado correctamente" : "Guardar configuracion"}
           </button>
         </div>
