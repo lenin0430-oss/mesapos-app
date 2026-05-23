@@ -41,6 +41,10 @@ export default function DashboardPage() {
             <h2 className="text-xl font-bold mb-2">Configuracion</h2>
             <p className="text-zinc-400">Nombre, moneda y carta QR.</p>
           </a>
+          <a href="/gastos" className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-orange-500 transition">
+            <h2 className="text-xl font-bold mb-2">Gastos</h2>
+            <p className="text-zinc-400">Control de costos y margen real.</p>
+          </a>
         </div>
       </div>
     </main>
