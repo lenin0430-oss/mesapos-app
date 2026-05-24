@@ -45,6 +45,18 @@ export default function DashboardPage() {
             <h2 className="text-xl font-bold mb-2">Gastos</h2>
             <p className="text-zinc-400">Control de costos y margen real.</p>
           </a>
+          <a href="/insumos" className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-orange-500 transition">
+            <h2 className="text-xl font-bold mb-2">Insumos</h2>
+            <p className="text-zinc-400">Ingredientes y precios de compra.</p>
+          </a>
+          <a href="/recetas" className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-orange-500 transition">
+            <h2 className="text-xl font-bold mb-2">Recetas</h2>
+            <p className="text-zinc-400">Costo de produccion por plato.</p>
+          </a>
+          <a href="/costeo" className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-orange-500 transition">
+            <h2 className="text-xl font-bold mb-2">Costeo</h2>
+            <p className="text-zinc-400">Precio sugerido y margen por plato.</p>
+          </a>
         </div>
       </div>
     </main>
