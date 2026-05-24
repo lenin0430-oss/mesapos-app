@@ -13,10 +13,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const verificar = async () => {
       const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        window.location.href = "/login";
-        return;
-      }
+      if (!data.session) { window.location.href = "/login"; return; }
       setVerificando(false);
     };
     verificar();
@@ -27,13 +24,11 @@ export default function DashboardPage() {
     window.location.href = "/login";
   };
 
-  if (verificando) {
-    return (
-      <main className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <p className="text-zinc-400">Verificando sesion...</p>
-      </main>
-    );
-  }
+  if (verificando) return (
+    <main className="min-h-screen bg-zinc-950 flex items-center justify-center">
+      <p className="text-zinc-400">Verificando sesion...</p>
+    </main>
+  );
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white p-8">
@@ -95,6 +90,10 @@ export default function DashboardPage() {
           <a href="/costeo" className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-orange-500 transition">
             <h2 className="text-xl font-bold mb-2">Costeo</h2>
             <p className="text-zinc-400">Precio sugerido y margen por plato.</p>
+          </a>
+          <a href="/stock" className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-orange-500 transition">
+            <h2 className="text-xl font-bold mb-2">Stock</h2>
+            <p className="text-zinc-400">Alertas de ingredientes bajos.</p>
           </a>
         </div>
       </div>
