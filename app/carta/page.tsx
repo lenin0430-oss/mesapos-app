@@ -13,40 +13,66 @@ export default function CartaPage() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [categoriaActiva, setCategoriaActiva] = useState("Todas");
   const [busqueda, setBusqueda] = useState("");
-  const [nombreNegocio, setNombreNegocio] = useState("Mi Restaurante");
+  const [nombreNegocio, setNombreNegocio] = useState("MesaPOS");
   const [cargando, setCargando] = useState(true);
 
-  useEffect(() => {
-    cargarDatos();
-  }, []);
+  useEffect(() => { cargarDatos(); }, []);
 
   const cargarDatos = async () => {
     setCargando(true);
     try {
-      const { data, error } = await supabase
-        .from("productos")
-        .select("id, nombre, precio, descripcion, categorias(nombre)")
-        .eq("disponible", true)
-        .order("nombre");
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        const { data: usuario } = await supabase
+          .from("usuarios")
+          .select("empresa_id, empresas(nombre)")
+          .eq("id", session.user.id)
+          .single();
+        
+        if (usuario?.empresas) {
+          setNombreNegocio((usuario.empresas as any).nombre);
+        }
 
-      if (data && !error) {
-        const formateados = data.map((p: any) => ({
-          id: p.id,
-          nombre: p.nombre,
-          precio: p.precio,
-          descripcion: p.descripcion,
-          categoria: p.categorias?.nombre || "Sin categoria",
-        }));
-        setProductos(formateados);
+        const empresaId = usuario?.empresa_id;
+        if (empresaId) {
+          const { data } = await supabase
+            .from("productos")
+            .select("id, nombre, precio, descripcion, categorias(nombre)")
+            .eq("disponible", true)
+            .eq("empresa_id", empresaId)
+            .order("nombre");
+
+          if (data) {
+            setProductos(data.map((p: any) => ({
+              id: p.id,
+              nombre: p.nombre,
+              precio: p.precio,
+              descripcion: p.descripcion,
+              categoria: p.categorias?.nombre || "Sin categoria",
+            })));
+          }
+        }
+      } else {
+        // Sin sesion: cargar todos los productos (carta publica)
+        const { data } = await supabase
+          .from("productos")
+          .select("id, nombre, precio, descripcion, categorias(nombre)")
+          .eq("disponible", true)
+          .order("nombre");
+
+        if (data) {
+          setProductos(data.map((p: any) => ({
+            id: p.id,
+            nombre: p.nombre,
+            precio: p.precio,
+            descripcion: p.descripcion,
+            categoria: p.categorias?.nombre || "Sin categoria",
+          })));
+        }
       }
     } catch (e) {
       console.error(e);
-    }
-
-    const config = localStorage.getItem("config_negocio");
-    if (config) {
-      const datos = JSON.parse(config);
-      if (datos.nombre) setNombreNegocio(datos.nombre);
     }
     setCargando(false);
   };
@@ -62,8 +88,6 @@ export default function CartaPage() {
     items: filtrados.filter((p) => p.categoria === cat),
   })).filter((g) => g.items.length > 0);
 
-  const inicial = nombreNegocio.charAt(0).toUpperCase();
-
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
       <div className="sticky top-0 z-10 bg-zinc-950 border-b border-zinc-800 px-4 py-4">
@@ -74,7 +98,7 @@ export default function CartaPage() {
               <p className="text-zinc-400 text-sm">Menu digital</p>
             </div>
             <div className="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center text-black font-bold text-xl">
-              {inicial}
+              {nombreNegocio.charAt(0).toUpperCase()}
             </div>
           </div>
           <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar en el menu..." className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2 text-white text-sm mb-3" />
