@@ -1,12 +1,51 @@
 "use client";
+import { useEffect, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function DashboardPage() {
+  const [verificando, setVerificando] = useState(true);
+
+  useEffect(() => {
+    const verificar = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        window.location.href = "/login";
+        return;
+      }
+      setVerificando(false);
+    };
+    verificar();
+  }, []);
+
+  const cerrarSesion = async () => {
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  };
+
+  if (verificando) {
+    return (
+      <main className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <p className="text-zinc-400">Verificando sesion...</p>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-zinc-950 text-white p-8">
       <div className="max-w-5xl mx-auto">
-        <div className="mb-10">
-          <h1 className="text-4xl font-bold">Panel MesaPOS</h1>
-          <p className="text-zinc-400 mt-2">Sistema de punto de venta</p>
+        <div className="flex items-center justify-between mb-10">
+          <div>
+            <h1 className="text-4xl font-bold">Panel MesaPOS</h1>
+            <p className="text-zinc-400 mt-2">Sistema de punto de venta</p>
+          </div>
+          <button onClick={cerrarSesion} className="rounded-xl bg-zinc-800 px-4 py-2 font-bold hover:bg-zinc-700 text-sm">
+            Cerrar sesion
+          </button>
         </div>
         <div className="grid md:grid-cols-3 gap-6">
           <a href="/pedidos" className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-orange-500 transition">
