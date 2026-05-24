@@ -7,7 +7,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-type Producto = { id: number; nombre: string; precio: number; categoria: string; activo: boolean };
+type Producto = { id: string; nombre: string; precio: number; categoria: string; descripcion?: string };
 
 export default function CartaPage() {
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -25,25 +25,22 @@ export default function CartaPage() {
     try {
       const { data, error } = await supabase
         .from("productos")
-        .select("id, nombre, precio, categoria, activo")
-        .eq("activo", true)
-        .order("categoria");
+        .select("id, nombre, precio, descripcion, categorias(nombre)")
+        .eq("disponible", true)
+        .order("nombre");
 
       if (data && !error) {
-        setProductos(data);
-      } else {
-        const guardados = localStorage.getItem("productos_pos");
-        if (guardados) {
-          const todos: Producto[] = JSON.parse(guardados);
-          setProductos(todos.filter((p) => p.activo));
-        }
+        const formateados = data.map((p: any) => ({
+          id: p.id,
+          nombre: p.nombre,
+          precio: p.precio,
+          descripcion: p.descripcion,
+          categoria: p.categorias?.nombre || "Sin categoria",
+        }));
+        setProductos(formateados);
       }
-    } catch {
-      const guardados = localStorage.getItem("productos_pos");
-      if (guardados) {
-        const todos: Producto[] = JSON.parse(guardados);
-        setProductos(todos.filter((p) => p.activo));
-      }
+    } catch (e) {
+      console.error(e);
     }
 
     const config = localStorage.getItem("config_negocio");
@@ -111,7 +108,10 @@ export default function CartaPage() {
                 <div className="space-y-3">
                   {grupo.items.map((p) => (
                     <div key={p.id} className="flex justify-between items-center rounded-2xl bg-zinc-900 border border-zinc-800 p-4">
-                      <h3 className="font-bold text-white">{p.nombre}</h3>
+                      <div>
+                        <h3 className="font-bold text-white">{p.nombre}</h3>
+                        {p.descripcion && <p className="text-zinc-400 text-sm mt-1">{p.descripcion}</p>}
+                      </div>
                       <span className="ml-4 text-orange-400 font-bold text-lg whitespace-nowrap">$ {fmt(p.precio)}</span>
                     </div>
                   ))}
@@ -123,7 +123,10 @@ export default function CartaPage() {
           <div className="space-y-3">
             {filtrados.map((p) => (
               <div key={p.id} className="flex justify-between items-center rounded-2xl bg-zinc-900 border border-zinc-800 p-4">
-                <h3 className="font-bold text-white">{p.nombre}</h3>
+                <div>
+                  <h3 className="font-bold text-white">{p.nombre}</h3>
+                  {p.descripcion && <p className="text-zinc-400 text-sm mt-1">{p.descripcion}</p>}
+                </div>
                 <span className="ml-4 text-orange-400 font-bold text-lg whitespace-nowrap">$ {fmt(p.precio)}</span>
               </div>
             ))}
