@@ -1,5 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 type Producto = { id: number; nombre: string; precio: number; categoria: string; activo: boolean };
 
@@ -8,19 +14,45 @@ export default function CartaPage() {
   const [categoriaActiva, setCategoriaActiva] = useState("Todas");
   const [busqueda, setBusqueda] = useState("");
   const [nombreNegocio, setNombreNegocio] = useState("Mi Restaurante");
+  const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
-    const guardados = localStorage.getItem("productos_pos");
-    if (guardados) {
-      const todos: Producto[] = JSON.parse(guardados);
-      setProductos(todos.filter((p) => p.activo));
+    cargarDatos();
+  }, []);
+
+  const cargarDatos = async () => {
+    setCargando(true);
+    try {
+      const { data, error } = await supabase
+        .from("productos")
+        .select("id, nombre, precio, categoria, activo")
+        .eq("activo", true)
+        .order("categoria");
+
+      if (data && !error) {
+        setProductos(data);
+      } else {
+        const guardados = localStorage.getItem("productos_pos");
+        if (guardados) {
+          const todos: Producto[] = JSON.parse(guardados);
+          setProductos(todos.filter((p) => p.activo));
+        }
+      }
+    } catch {
+      const guardados = localStorage.getItem("productos_pos");
+      if (guardados) {
+        const todos: Producto[] = JSON.parse(guardados);
+        setProductos(todos.filter((p) => p.activo));
+      }
     }
+
     const config = localStorage.getItem("config_negocio");
     if (config) {
       const datos = JSON.parse(config);
       if (datos.nombre) setNombreNegocio(datos.nombre);
     }
-  }, []);
+    setCargando(false);
+  };
 
   const fmt = (v: number) => new Intl.NumberFormat("es-CL").format(v);
   const categorias = ["Todas", ...Array.from(new Set(productos.map((p) => p.categoria)))];
@@ -48,23 +80,11 @@ export default function CartaPage() {
               {inicial}
             </div>
           </div>
-          <input
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar en el menu..."
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2 text-white text-sm mb-3"
-          />
+          <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar en el menu..." className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2 text-white text-sm mb-3" />
           <div className="flex gap-2 overflow-x-auto pb-1">
             {categorias.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setCategoriaActiva(cat)}
-                className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-bold transition ${
-                  categoriaActiva === cat
-                    ? "bg-orange-500 text-black"
-                    : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-                }`}
-              >
+              <button key={cat} onClick={() => setCategoriaActiva(cat)}
+                className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-bold transition ${categoriaActiva === cat ? "bg-orange-500 text-black" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"}`}>
                 {cat}
               </button>
             ))}
@@ -73,25 +93,26 @@ export default function CartaPage() {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-6">
-        {productos.length === 0 ? (
+        {cargando ? (
           <div className="text-center py-20">
             <p className="text-5xl mb-4">🍽️</p>
-            <p className="text-zinc-400">El menu se esta cargando...</p>
+            <p className="text-zinc-400">Cargando menu...</p>
+          </div>
+        ) : productos.length === 0 ? (
+          <div className="text-center py-20">
+            <p className="text-5xl mb-4">🍽️</p>
+            <p className="text-zinc-400">El menu se esta preparando...</p>
           </div>
         ) : categoriaActiva === "Todas" ? (
           <div className="space-y-8">
             {porCategoria.map((grupo) => (
               <section key={grupo.nombre}>
-                <h2 className="text-lg font-bold text-orange-400 mb-3 border-b border-zinc-800 pb-2">
-                  {grupo.nombre}
-                </h2>
+                <h2 className="text-lg font-bold text-orange-400 mb-3 border-b border-zinc-800 pb-2">{grupo.nombre}</h2>
                 <div className="space-y-3">
                   {grupo.items.map((p) => (
                     <div key={p.id} className="flex justify-between items-center rounded-2xl bg-zinc-900 border border-zinc-800 p-4">
                       <h3 className="font-bold text-white">{p.nombre}</h3>
-                      <span className="ml-4 text-orange-400 font-bold text-lg whitespace-nowrap">
-                        $ {fmt(p.precio)}
-                      </span>
+                      <span className="ml-4 text-orange-400 font-bold text-lg whitespace-nowrap">$ {fmt(p.precio)}</span>
                     </div>
                   ))}
                 </div>
@@ -103,14 +124,11 @@ export default function CartaPage() {
             {filtrados.map((p) => (
               <div key={p.id} className="flex justify-between items-center rounded-2xl bg-zinc-900 border border-zinc-800 p-4">
                 <h3 className="font-bold text-white">{p.nombre}</h3>
-                <span className="ml-4 text-orange-400 font-bold text-lg whitespace-nowrap">
-                  $ {fmt(p.precio)}
-                </span>
+                <span className="ml-4 text-orange-400 font-bold text-lg whitespace-nowrap">$ {fmt(p.precio)}</span>
               </div>
             ))}
           </div>
         )}
-
         <div className="mt-10 text-center">
           <p className="text-zinc-600 text-xs">Powered by</p>
           <p className="text-orange-500 font-bold text-sm">MesaPOS</p>
