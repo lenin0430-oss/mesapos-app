@@ -1,7 +1,8 @@
 "use client";
 import { use, useEffect, useState } from "react";
+import { cargarCatalogoEmpresa } from "@/lib/catalogo";
 
-type Producto = { id: number; nombre: string; precio: number; categoria: string; activo: boolean };
+type Producto = { id: string; nombre: string; precio: number; categoria: string; activo: boolean };
 type ProductoPedido = Producto & { cantidad: number };
 type PageProps = { params: Promise<{ mesa: string }> };
 
@@ -18,14 +19,52 @@ export default function MesaPedidoPage({ params }: PageProps) {
   const [propina, setPropina] = useState(0);
   const [propinaCustom, setPropinaCustom] = useState("");
   const [mostrarExtras, setMostrarExtras] = useState(false);
+  const [cargandoProductos, setCargandoProductos] = useState(true);
+  const [errorCatalogo, setErrorCatalogo] = useState("");
 
   useEffect(() => {
-    const guardados = localStorage.getItem("productos_pos");
-    const todos: Producto[] = guardados ? JSON.parse(guardados) : [];
-    setProductos(todos.filter((p) => p.activo));
+    let activo = true;
+
+    const cargarProductos = async () => {
+      setCargandoProductos(true);
+      setErrorCatalogo("");
+
+      const catalogo = await cargarCatalogoEmpresa();
+
+      let lista: Producto[] = catalogo.productos.map((producto) => ({
+        id: producto.id,
+        nombre: producto.nombre,
+        precio: producto.precio,
+        categoria: producto.categoria,
+        activo: producto.activo,
+      }));
+
+      if (lista.length === 0) {
+        const guardados = localStorage.getItem("productos_pos");
+        const todos: Producto[] = guardados
+          ? JSON.parse(guardados).map((producto: any) => ({
+              ...producto,
+              id: String(producto.id),
+            }))
+          : [];
+
+        lista = todos.filter((producto) => producto.activo);
+      }
+
+      if (!activo) return;
+
+      setProductos(lista);
+      setErrorCatalogo(lista.length === 0 ? catalogo.error || "No hay productos activos." : "");
+      setCargandoProductos(false);
+    };
+
+    cargarProductos();
+
     const enviados = JSON.parse(localStorage.getItem("pedidos_enviados") || "[]");
     const existe = enviados.find((p: any) => p.mesa === mesaNombre && p.estado === "Enviado");
     if (existe) { setPedido(existe.productos || []); setNota(existe.nota || ""); }
+
+    return () => { activo = false; };
   }, [mesaNombre]);
 
   const fmt = (v: number) => new Intl.NumberFormat("es-CL").format(Math.round(v));
@@ -41,7 +80,7 @@ export default function MesaPedidoPage({ params }: PageProps) {
     else setPedido([...pedido, { ...p, cantidad: 1 }]);
   };
 
-  const restar = (id: number) => {
+  const restar = (id: string) => {
     const item = pedido.find((i) => i.id === id);
     if (!item) return;
     if (item.cantidad === 1) setPedido(pedido.filter((i) => i.id !== id));
@@ -90,7 +129,11 @@ export default function MesaPedidoPage({ params }: PageProps) {
             ))}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {filtrados.map((p) => (
+            {cargandoProductos ? (
+              <p className="text-zinc-400">Cargando productos...</p>
+            ) : filtrados.length === 0 ? (
+              <p className="text-zinc-400">{errorCatalogo || "No hay productos para mostrar."}</p>
+            ) : filtrados.map((p) => (
               <button key={p.id} onClick={() => agregar(p)} className="rounded-xl bg-zinc-800 p-4 text-left hover:bg-orange-500 hover:text-black transition">
                 <h3 className="font-bold">{p.nombre}</h3>
                 <p>$ {fmt(p.precio)}</p>

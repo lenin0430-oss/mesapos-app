@@ -1,11 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { cargarCatalogoEmpresa } from "@/lib/catalogo";
 
 type Producto = { id: string; nombre: string; precio: number; categoria: string; descripcion?: string };
 
@@ -23,50 +18,21 @@ export default function CartaPage() {
     try {
       const params = new URLSearchParams(window.location.search);
       const empresaIdUrl = params.get("empresa");
+      const slugUrl = params.get("slug");
 
-      let empresaId = empresaIdUrl;
-      let nombre = "MesaPOS";
+      const catalogo = await cargarCatalogoEmpresa({
+        empresaId: empresaIdUrl,
+        slug: slugUrl,
+      });
 
-      if (!empresaId) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          const { data: usuario } = await supabase
-            .from("usuarios")
-            .select("empresa_id, empresas(nombre)")
-            .eq("id", session.user.id)
-            .single();
-          empresaId = usuario?.empresa_id;
-          nombre = (usuario?.empresas as any)?.nombre || "MesaPOS";
-        }
-      } else {
-        const { data: emp } = await supabase
-          .from("empresas")
-          .select("nombre")
-          .eq("id", empresaIdUrl)
-          .single();
-        nombre = emp?.nombre || "MesaPOS";
-      }
-
-      setNombreNegocio(nombre);
-
-      if (empresaId) {
-        const { data } = await supabase
-          .from("productos")
-          .select("id, nombre, precio, descripcion, categorias(nombre)")
-          .eq("disponible", true)
-          .eq("empresa_id", empresaId)
-          .order("nombre");
-
-        if (data) {
-          setProductos(data.map((p: any) => ({
-            id: p.id,
-            nombre: p.nombre,
-            precio: p.precio,
-            descripcion: p.descripcion,
-            categoria: p.categorias?.nombre || "Sin categoria",
-          })));
-        }
-      }
+      setNombreNegocio(catalogo.nombreEmpresa);
+      setProductos(catalogo.productos.map((producto) => ({
+        id: producto.id,
+        nombre: producto.nombre,
+        precio: producto.precio,
+        descripcion: producto.descripcion,
+        categoria: producto.categoria,
+      })));
     } catch (e) {
       console.error(e);
     }

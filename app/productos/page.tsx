@@ -1,75 +1,49 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  cargarCatalogoEmpresa,
+  type CategoriaCatalogo,
+  type ProductoCatalogo,
+} from "@/lib/catalogo";
+import { supabase } from "@/lib/supabase";
 
-type Producto = {
-  id: number;
-  nombre: string;
-  precio: number;
-  categoria: string;
-  activo: boolean;
-};
-
-const categoriasBase = [
-  "Comida rápida",
-  "Platos",
-  "Arepas",
-  "Pepitos",
-  "Pasapalos",
-  "Acompañamientos",
-  "Bebidas",
-];
-
-const productosBase: Producto[] = [
-  { id: 1, nombre: "Hamburguesa", precio: 3000, categoria: "Comida rápida", activo: true },
-  { id: 2, nombre: "Perro caliente", precio: 1000, categoria: "Comida rápida", activo: true },
-  { id: 3, nombre: "Arroz chino", precio: 7500, categoria: "Platos", activo: true },
-  { id: 4, nombre: "Cachapa", precio: 6000, categoria: "Platos", activo: true },
-  { id: 5, nombre: "Arepa carne mechada", precio: 5500, categoria: "Arepas", activo: true },
-  { id: 6, nombre: "Arepa reina pepiada", precio: 5500, categoria: "Arepas", activo: true },
-  { id: 7, nombre: "Pepito mixto", precio: 8500, categoria: "Pepitos", activo: true },
-  { id: 8, nombre: "Pepito de pollo", precio: 7500, categoria: "Pepitos", activo: true },
-  { id: 9, nombre: "Tequeños 6 unidades", precio: 4500, categoria: "Pasapalos", activo: true },
-  { id: 10, nombre: "Papas fritas", precio: 3500, categoria: "Acompañamientos", activo: true },
-];
+type Producto = ProductoCatalogo;
 
 export default function ProductosPage() {
   const [productos, setProductos] = useState<Producto[]>([]);
-  const [categorias, setCategorias] = useState<string[]>(categoriasBase);
+  const [categorias, setCategorias] = useState<string[]>([]);
+  const [categoriasDetalle, setCategoriasDetalle] = useState<CategoriaCatalogo[]>([]);
+  const [empresaId, setEmpresaId] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState("Todas");
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState("");
 
-  const [editandoId, setEditandoId] = useState<number | null>(null);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
   const [nombre, setNombre] = useState("");
   const [precio, setPrecio] = useState("");
-  const [categoria, setCategoria] = useState(categoriasBase[0]);
+  const [categoria, setCategoria] = useState("");
+
+  const cargarProductos = async () => {
+    setCargando(true);
+    setError("");
+
+    const catalogo = await cargarCatalogoEmpresa({ incluirInactivos: true });
+
+    setEmpresaId(catalogo.empresaId);
+    setProductos(catalogo.productos);
+    setCategorias(catalogo.categorias);
+    setCategoriasDetalle(catalogo.categoriasDetalle);
+    setCategoria((actual) => actual || catalogo.categorias[0] || "");
+    setError(catalogo.error || "");
+    setCargando(false);
+  };
 
   useEffect(() => {
-    const guardados = localStorage.getItem("productos_pos");
-
-    if (guardados) {
-      setProductos(JSON.parse(guardados));
-    } else {
-      localStorage.setItem("productos_pos", JSON.stringify(productosBase));
-      setProductos(productosBase);
-    }
-
-    const categoriasGuardadas = localStorage.getItem("categorias_pos");
-
-    if (categoriasGuardadas) {
-      const categoriasActivas = JSON.parse(categoriasGuardadas)
-        .filter((cat: any) => cat.activa)
-        .map((cat: any) => cat.nombre);
-
-      setCategorias(categoriasActivas);
-      setCategoria(categoriasActivas[0] || categoriasBase[0]);
-    }
+    cargarProductos();
   }, []);
-
-  const guardarProductos = (data: Producto[]) => {
-    localStorage.setItem("productos_pos", JSON.stringify(data));
-    setProductos(data);
-  };
 
   const formatoPrecio = (valor: number) => {
     return new Intl.NumberFormat("es-CL").format(valor);
@@ -79,10 +53,19 @@ export default function ProductosPage() {
     setEditandoId(null);
     setNombre("");
     setPrecio("");
-    setCategoria(categoriasBase[0]);
+    setCategoria(categorias[0] || "");
   };
 
-  const guardarProducto = () => {
+  const categoriaSeleccionada = () => {
+    return categoriasDetalle.find((item) => item.nombre === categoria);
+  };
+
+  const guardarProducto = async () => {
+    if (!empresaId) {
+      alert("No se encontro la empresa activa.");
+      return;
+    }
+
     if (!nombre.trim()) {
       alert("Ingresa el nombre del producto.");
       return;
@@ -91,37 +74,42 @@ export default function ProductosPage() {
     const precioNumero = Number(precio);
 
     if (!precioNumero || precioNumero <= 0) {
-      alert("Ingresa un precio válido.");
+      alert("Ingresa un precio valido.");
       return;
     }
 
-    if (editandoId) {
-      const actualizados = productos.map((producto) =>
-        producto.id === editandoId
-          ? {
-              ...producto,
-              nombre: nombre.trim(),
-              precio: precioNumero,
-              categoria,
-            }
-          : producto
-      );
+    const categoriaActual = categoriaSeleccionada();
 
-      guardarProductos(actualizados);
-      limpiarFormulario();
+    if (!categoriaActual) {
+      alert("Selecciona una categoria valida.");
       return;
     }
 
-    const nuevoProducto: Producto = {
-      id: Date.now(),
+    setGuardando(true);
+
+    const payload = {
       nombre: nombre.trim(),
       precio: precioNumero,
-      categoria,
-      activo: true,
+      categoria_id: categoriaActual.id,
+      disponible: true,
     };
 
-    guardarProductos([nuevoProducto, ...productos]);
+    const { error: supabaseError } = editandoId
+      ? await supabase.from("productos").update(payload).eq("id", editandoId)
+      : await supabase.from("productos").insert({
+          ...payload,
+          empresa_id: empresaId,
+        });
+
+    if (supabaseError) {
+      alert("No se pudo guardar: " + supabaseError.message);
+      setGuardando(false);
+      return;
+    }
+
     limpiarFormulario();
+    await cargarProductos();
+    setGuardando(false);
   };
 
   const editarProducto = (producto: Producto) => {
@@ -131,19 +119,34 @@ export default function ProductosPage() {
     setCategoria(producto.categoria);
   };
 
-  const eliminarProducto = (id: number) => {
-    if (!confirm("¿Eliminar este producto?")) return;
+  const eliminarProducto = async (id: string) => {
+    if (!confirm("Desactivar este producto?")) return;
 
-    const actualizados = productos.filter((producto) => producto.id !== id);
-    guardarProductos(actualizados);
+    const { error: supabaseError } = await supabase
+      .from("productos")
+      .update({ disponible: false })
+      .eq("id", id);
+
+    if (supabaseError) {
+      alert("No se pudo desactivar: " + supabaseError.message);
+      return;
+    }
+
+    await cargarProductos();
   };
 
-  const cambiarEstado = (id: number) => {
-    const actualizados = productos.map((producto) =>
-      producto.id === id ? { ...producto, activo: !producto.activo } : producto
-    );
+  const cambiarEstado = async (producto: Producto) => {
+    const { error: supabaseError } = await supabase
+      .from("productos")
+      .update({ disponible: !producto.activo })
+      .eq("id", producto.id);
 
-    guardarProductos(actualizados);
+    if (supabaseError) {
+      alert("No se pudo cambiar el estado: " + supabaseError.message);
+      return;
+    }
+
+    await cargarProductos();
   };
 
   const productosFiltrados = productos.filter((producto) => {
@@ -161,14 +164,14 @@ export default function ProductosPage() {
     <main className="min-h-screen bg-zinc-950 text-white p-6">
       <div className="mb-8">
         <a href="/dashboard" className="text-orange-400 hover:underline">
-          ← Volver al dashboard
+          Volver al dashboard
         </a>
 
         <div className="flex items-center justify-between gap-4 mt-6">
           <div>
             <h1 className="text-3xl font-bold">Productos</h1>
             <p className="text-zinc-400 mt-2">
-              Administra productos, precios, categorías y estado.
+              Administra productos, precios, categorias y estado desde Supabase.
             </p>
           </div>
 
@@ -180,6 +183,12 @@ export default function ProductosPage() {
           </a>
         </div>
       </div>
+
+      {error && (
+        <div className="mb-5 rounded-xl border border-red-500/40 bg-red-500/10 p-4">
+          <p className="text-sm font-bold text-red-300">{error}</p>
+        </div>
+      )}
 
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
@@ -217,9 +226,10 @@ export default function ProductosPage() {
 
             <button
               onClick={guardarProducto}
-              className="w-full rounded-xl bg-orange-500 py-3 font-bold text-black hover:bg-orange-400"
+              disabled={guardando || cargando || categorias.length === 0}
+              className="w-full rounded-xl bg-orange-500 py-3 font-bold text-black hover:bg-orange-400 disabled:opacity-50"
             >
-              {editandoId ? "Guardar cambios" : "Crear producto"}
+              {guardando ? "Guardando..." : editandoId ? "Guardar cambios" : "Crear producto"}
             </button>
 
             {editandoId && (
@@ -227,7 +237,7 @@ export default function ProductosPage() {
                 onClick={limpiarFormulario}
                 className="w-full rounded-xl border border-zinc-700 py-3 font-bold hover:bg-zinc-800"
               >
-                Cancelar edición
+                Cancelar edicion
               </button>
             )}
           </div>
@@ -257,7 +267,9 @@ export default function ProductosPage() {
           </div>
 
           <div className="space-y-3">
-            {productosFiltrados.length === 0 ? (
+            {cargando ? (
+              <p className="text-zinc-400">Cargando productos...</p>
+            ) : productosFiltrados.length === 0 ? (
               <p className="text-zinc-400">No hay productos para mostrar.</p>
             ) : (
               productosFiltrados.map((producto) => (
@@ -287,7 +299,7 @@ export default function ProductosPage() {
                     </button>
 
                     <button
-                      onClick={() => cambiarEstado(producto.id)}
+                      onClick={() => cambiarEstado(producto)}
                       className="rounded-xl bg-yellow-500 px-4 py-2 font-bold text-black hover:bg-yellow-400"
                     >
                       {producto.activo ? "Desactivar" : "Activar"}
@@ -297,7 +309,7 @@ export default function ProductosPage() {
                       onClick={() => eliminarProducto(producto.id)}
                       className="rounded-xl bg-red-600 px-4 py-2 font-bold hover:bg-red-500"
                     >
-                      Eliminar
+                      Quitar
                     </button>
                   </div>
                 </div>
